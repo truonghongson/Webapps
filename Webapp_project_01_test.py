@@ -1,41 +1,25 @@
 import streamlit as st
-import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.io import loadmat
 import numpy as np
-
-st.write("""# My first test of project DTDL.CNN.53-21
-Hello * Web app World!* from Hanoi, Vietnam
-Created & Updated 21-04-2024
-""")
-
-DATE_COLUMN = 'date/time'
-DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
-            'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
-
-@st.cache_data
-def load_data(nrows):
-    data = pd.read_csv(DATA_URL, nrows=nrows)
-    lowercase = lambda x: str(x).lower()
-    data.rename(lowercase, axis='columns', inplace=True)
-    data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
-    return data
-
-data_load_state = st.text('Loading data...')
-data = load_data(10000)
-data_load_state.text("Done! (using st.cache_data)")
-
-if st.checkbox('Show raw data'):
-    st.subheader('Raw data')
-    st.write(data)
-
-st.subheader('Number of pickups by hour')
-hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
-st.bar_chart(hist_values)
-
-# Some number in the range 0-23
-hour_to_filter = st.slider('hour', 0, 23, 17)
-filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
-
-
-# Visualise in Map using st.map()
-st.subheader('Map of all pickups at %s:00' % hour_to_filter)
-st.map(filtered_data)
+st.title('Vietnam Shapefile Viewer')
+# File uploader allows user to add their own .mat file
+uploaded_file = st.file_uploader("Choose a .mat file", type=['mat'])
+if uploaded_file is not None:
+    # Use the uploaded file instead of the hardcoded path
+    data = loadmat(uploaded_file)
+    try:
+        # Assuming 'VN_shape' is the key in the .mat file containing the shape data
+        VN_shape = data['VN_shape'][0]  # Adjust indexing based on your data structure
+        fig, ax = plt.subplots()
+        for shape in VN_shape:
+            ax.plot(shape['X'][0], shape['Y'][0], 'k-')  # Adjust the indexing if necessary
+        ax.set_xlabel('Easting (m)')
+        ax.set_ylabel('Northing (m)')
+        ax.set_title('UTM Projection of Vietnam Shapefile')
+        ax.grid(True)
+        st.pyplot(fig)
+    except KeyError:
+        st.error("Error: The key 'VN_shape' was not found in the .mat file. Please check the file and try again.")
+else:
+    st.warning("Please upload a .mat file to view the shapefile.")
